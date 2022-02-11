@@ -17,7 +17,7 @@ NOISE_SIGMA = 2.0
 
 IMG_SIZE = 4
 """DEFINE MAP ESTIMATE BEHAVIOUR"""
-MAP_ESTIMATE_ITERATIONS = 20
+MAP_ESTIMATE_ITERATIONS = 150
 MAP_REFINE_ITERATIONS = 40
 MAP_PROPOSAL_XY_SIGMA = 0.3
 MAP_PROPOSAL_RADIUS_SIGMA = 0.1
@@ -158,15 +158,7 @@ def hessian(data, params):
 def laplace_approximation_value(data, MAP):
     MAP_logprob = likelihood(data, MAP) + prior_probability(*MAP)
     H = hessian(data, MAP)
+    print(H)
     log_value = MAP_logprob + np.log(2 * np.pi ** (4/2)) - np.log(np.sqrt((-np.linalg.det(H))))
     return log_value
-
-
-data = simulator.Particle(0.0, 0.0, 2.0, 1000.0).getImage(IMG_SIZE) + simulator.noise(IMG_SIZE, 0.0, 0.0)
-MAP, _ = estimate_map(data, initial_suggestion=(0.0, 0.0, 1.8, 1000.0))
-MAP = refine_map(data, MAP)
-print("Maximum a-posteriori estimate for a:")
-print(MAP)
-print("Laplace approximation")
-print(laplace_approximation_value(data, MAP))
 
