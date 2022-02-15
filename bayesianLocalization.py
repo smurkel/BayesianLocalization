@@ -1,54 +1,27 @@
 from util import *
 
 import simulator
-import matplotlib.pyplot as plt
-from scipy.stats import lognorm, uniform, norm
-
+import modelparams as prm
 np.seterr(divide = 'ignore')
 
 """SET IMAGE AND MICROSCOPE PARAMETERS"""
-PSF_INTENSITY_MU = 1000
-PSF_INTENSITY_LOGNORM_S = 0.7
-PSF_RADIUS_MU = 2.0 # mean of the gaussian psf's standard deviation in units of pixels.
-PSF_RADIUS_LOGNORM_S = 0.1
 
-NOISE_MEAN = 0
-NOISE_SIGMA = 2.0
-
-IMG_SIZE = 4
-"""DEFINE MAP ESTIMATE BEHAVIOUR"""
-MAP_ESTIMATE_ITERATIONS = 150
-MAP_REFINE_ITERATIONS = 40
-MAP_PROPOSAL_XY_SIGMA = 0.3
-MAP_PROPOSAL_RADIUS_SIGMA = 0.1
-MAP_PROPOSAL_INTENSITY_SIGMA = 50.0
-MAP_REFINE_XY_SIGMA = 0.01
-"""HESSIAN STUFF"""
-HESSIAN_DELTA = [0.01, 0.01, 0.01, 0.01]
-"""DEFINE THE NOISE MODEL - IN PRACTICE, THE NOISE MODEL WILL BE DERIVED FROM IMAGES; IT IS A GAUSSIAN PDF WITH MEAN AND STD TAKEN FROM BACKGROUND PIXEL INTENSITY."""
-PDF_NOISE = norm(loc = NOISE_MEAN, scale = NOISE_SIGMA)
-"""DEFINE PRIOR PROBABILITIES FOR X, Y, SIGMA, and INTENSITY."""
-PDF_X = uniform(loc = -IMG_SIZE, scale = 2 * IMG_SIZE)
-PDF_Y = uniform(loc = -IMG_SIZE, scale = 2 * IMG_SIZE)
-PDF_SIGMA = lognorm(s = PSF_RADIUS_LOGNORM_S, scale = PSF_RADIUS_MU)
-PDF_INTENSITY = lognorm(s = PSF_INTENSITY_LOGNORM_S, scale = PSF_INTENSITY_MU)
-#################
 
 def prior_x(val):
     # x prior probability is: flat probability, but it is somewhere in the image.
-    return PDF_X.pdf(val)
+    return prm.PDF_X.pdf(val)
 
 def prior_y(val):
     # y prior probability is: flat probability, but it is somewhere in the image.
-    return PDF_Y.pdf(val)
+    return prm.PDF_Y.pdf(val)
 
 def prior_sigma(val):
     # sigma prior probability is: log normal distribution
-    return PDF_SIGMA.pdf(val)
+    return prm.PDF_SIGMA.pdf(val)
 
 def prior_intensity(val):
     # intensity prior probability is lognormal.
-    return PDF_INTENSITY.pdf(val)
+    return prm.PDF_INTENSITY.pdf(val)
 
 def estimate_map(data, initial_suggestion = None):
     """This can be improved by starting the random walk not at a random sample from the prior distributions, but instead near the mode of the likelihood. Also: the data should be cropped such that the mode of the likelihood
@@ -58,20 +31,20 @@ def estimate_map(data, initial_suggestion = None):
     if initial_suggestion:
         x = initial_suggestion
     else:
-        x = (PDF_X.rvs(1), PDF_Y.rvs(1), PDF_SIGMA.rvs(1), PDF_INTENSITY.rvs(1))
+        x = (prm.PDF_X.rvs(1), prm.PDF_Y.rvs(1), prm.PDF_SIGMA.rvs(1), prm.PDF_INTENSITY.rvs(1))
     p_x = likelihood(data, x) + prior_probability(*x)
     MAP = x
     max_log = p_x
-    for i in range(MAP_ESTIMATE_ITERATIONS):
-        print("ESTIMATING MAP iteration {}/{}".format(i, MAP_ESTIMATE_ITERATIONS))
+    for i in range(prm.MAP_ESTIMATE_ITERATIONS):
+        print("ESTIMATING MAP iteration {}/{}".format(i, prm.MAP_ESTIMATE_ITERATIONS))
         if p_x > max_log:
             MAP = x
             max_log = p_x
         # Step
-        dx0 = np.random.normal(loc=0, scale=MAP_PROPOSAL_XY_SIGMA)
-        dx1 = np.random.normal(loc=0, scale=MAP_PROPOSAL_XY_SIGMA)
-        dx2 = np.random.normal(loc=0, scale=MAP_PROPOSAL_RADIUS_SIGMA)
-        dx3 = np.random.normal(loc=0, scale=MAP_PROPOSAL_INTENSITY_SIGMA)
+        dx0 = np.random.normal(loc=0, scale=prm.MAP_PROPOSAL_XY_SIGMA)
+        dx1 = np.random.normal(loc=0, scale=prm.MAP_PROPOSAL_XY_SIGMA)
+        dx2 = np.random.normal(loc=0, scale=prm.MAP_PROPOSAL_RADIUS_SIGMA)
+        dx3 = np.random.normal(loc=0, scale=prm.MAP_PROPOSAL_INTENSITY_SIGMA)
 
         # Perform step
         y = (x[0]+dx0, x[1]+dx1, x[2]+dx2, x[3]+dx3)
@@ -92,13 +65,13 @@ def estimate_map(data, initial_suggestion = None):
             else:
                 parameter_samples.append([x[0], x[1], x[2], x[3], p_x])
 
-    return MAP, parameter_samples
+    return MAP
 
 def refine_map(data, map):
     x = map
     Px = likelihood(data, x)  # prior_probability not checked, because only xpos and ypos change which are uniformly distributed.
-    for i in range(MAP_REFINE_ITERATIONS):
-        dpos = np.random.normal(loc=0, scale=MAP_REFINE_XY_SIGMA)
+    for i in range(prm.MAP_REFINE_ITERATIONS):
+        dpos = np.random.normal(loc=0, scale=prm.MAP_REFINE_XY_SIGMA)
         if (i % 2) == 0:
             y = (x[0] + dpos, x[1], x[2], x[3])
         else:
@@ -118,7 +91,7 @@ def likelihood(data, parameters):
     # Parameters are of a model that describes a Gaussian spot.
     # Here:
     # 1 - 'simulate' the data according to parameters.
-    model = simulator.Particle(*parameters).getImage(IMG_SIZE)
+    model = simulator.particle_image(prm.IMG_SIZE, parameters)
     # 2 - subtract model from data. what remains is noise.
     noise = data - model
     # 3 - evaluate the probability of observing this noise given the noise model
@@ -130,9 +103,15 @@ def eval_noise(noise):
     log_probability = 0.0
     for i in range(N):
         for j in range(N):
-                log_probability += np.log(PDF_NOISE.pdf(noise[i,j]))
+                log_probability += np.log(prm.PDF_NOISE.pdf(noise[i,j]))
     return log_probability
 
+def eval_noise_stack(noise):
+    w, h, f = noise.shape
+    log_p = 0
+    for i in range(f):
+        log_p += eval_noise(noise[:, :, i])
+    return log_p
 
 def hessian(data, params):
     def f(x):
@@ -147,18 +126,60 @@ def hessian(data, params):
 
     for i in range(4):
         dxi = np.zeros(4)
-        dxi[i] = HESSIAN_DELTA[i]
+        dxi[i] = prm.NUMERICAL_DERIVATIVE_DELTA[i]
         for j in range(4):
             dxj = np.zeros(4)
-            dxj[j] = HESSIAN_DELTA[j]
-            temp = (f(x + dxi + dxj) - f(x + dxj - dxi) - f(x - dxj + dxi) + f(x + dxj - dxi) ) / (2 * HESSIAN_DELTA[i] * HESSIAN_DELTA[j])
+            dxj[j] = prm.NUMERICAL_DERIVATIVE_DELTA[j]
+            temp = (f(x + dxi + dxj) - f(x + dxj - dxi) - f(x - dxj + dxi) + f(x + dxj - dxi) ) / (2 * prm.NUMERICAL_DERIVATIVE_DELTA[i] * prm.NUMERICAL_DERIVATIVE_DELTA[j])
             Hessian[i, j] = temp
     return Hessian
 
 def laplace_approximation_value(data, MAP):
     MAP_logprob = likelihood(data, MAP) + prior_probability(*MAP)
     H = hessian(data, MAP)
-    print(H)
+    detH = -np.linalg.det(H)
     log_value = MAP_logprob + np.log(2 * np.pi ** (4/2)) - np.log(np.sqrt((-np.linalg.det(H))))
-    return log_value
+    return float(log_value)
 
+def markov_approximation_value(data, MAP, markovModel):
+    width, height, num_frames = data.shape
+    log_likelihood_off_state = list()
+    log_p_samples = list()
+    for f in range(num_frames):
+        log_likelihood_off_state.append(eval_noise(data[:, :, f]))
+    for s in range(prm.MARKOV_SAMPLES):
+        state_sequence = markovModel.sample(length = num_frames)
+        log_p = markovModel.log_probability(state_sequence)
+        for f in range(num_frames):
+            if state_sequence[f]: # State is ON
+                log_p += likelihood(data[:, :, f], MAP)
+            else:
+                log_p += log_likelihood_off_state[f]
+        log_p_samples.append(log_p)
+    avg_log_p = log_avg_probability_from_logprobabilities(log_p_samples)
+    state_space_volume = num_frames * np.log(2)
+    return np.log(state_space_volume) + avg_log_p - np.log(prm.MARKOV_SAMPLES)
+
+def log_avg_probability_from_logprobabilities(logp):
+    maxlog = logp[0]
+    for i in logp:
+        if i > maxlog:
+            maxlog = i
+    offset_log = list()
+    for i in logp:
+        offset_log.append(maxlog - i)
+    val = 0
+    for i in offset_log:
+        val += np.exp(-i)
+    log_avg_p = np.log(val) + maxlog
+    return log_avg_p
+
+def estimate_state(data, MAP):
+    # For every frame, estimate whether a particle at the MAP was ON or OFF, based on the relative probability of P(D|F)/P(D|N)
+    width, height, n_frames = data.shape
+    state = list()
+    for f in range(n_frames):
+        pf = likelihood(data[:, :, f], MAP)
+        pn = eval_noise(data)
+        state.append(pf > pn)
+    return state

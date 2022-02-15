@@ -1,0 +1,41 @@
+from scipy.stats import lognorm, uniform, norm
+import markov
+############
+# SETTINGS #
+############
+IMG_SIZE = 11
+"""DEFINE MAP ESTIMATE BEHAVIOUR"""
+MAP_ESTIMATE_ITERATIONS = 100
+MAP_REFINE_ITERATIONS = 40
+MAP_PROPOSAL_XY_SIGMA = 0.3
+MAP_PROPOSAL_RADIUS_SIGMA = 0.1
+MAP_PROPOSAL_INTENSITY_SIGMA = 50.0
+MAP_REFINE_XY_SIGMA = 0.01
+NUMERICAL_DERIVATIVE_DELTA = [0.01, 0.01, 0.01, 0.01]
+MARKOV_SAMPLES = 20
+############
+### DATA ###
+############
+"""PSF parameters"""
+PSF_INTENSITY_MU = 1000
+PSF_INTENSITY_LOGNORM_S = 0.7
+PSF_RADIUS_MU = 2.0 # mean of the gaussian psf's standard deviation in units of pixels.
+PSF_RADIUS_LOGNORM_S = 0.1
+"""Noise model"""
+NOISE_MEAN = 0
+NOISE_SIGMA = 2.0
+PDF_NOISE = norm(loc = NOISE_MEAN, scale = NOISE_SIGMA)
+##############
+### PRIORS ###
+##############
+"""DEFINE PRIOR PROBABILITIES FOR X, Y, SIGMA, and INTENSITY."""
+PDF_X = uniform(loc = -IMG_SIZE, scale = 2 * IMG_SIZE)
+PDF_Y = uniform(loc = -IMG_SIZE, scale = 2 * IMG_SIZE)
+PDF_SIGMA = lognorm(s = PSF_RADIUS_LOGNORM_S, scale = PSF_RADIUS_MU)
+PDF_INTENSITY = lognorm(s = PSF_INTENSITY_LOGNORM_S, scale = PSF_INTENSITY_MU)
+"""DEFINE MARKOV MODEL TRANSITION PROBABILITIES"""
+P_ON = 0.1
+P_OFF = 0.5
+P_BLEACH = 0.2
+P_FALSE_EMISSION = 0.0
+HMM = markov.GetHMM(P_ON,P_OFF,P_BLEACH,P_FALSE_EMISSION)
