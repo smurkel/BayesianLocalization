@@ -1,6 +1,6 @@
 from util import *
 
-import modelparams as prm
+import settings as prm
 import markov
 import numpy as np
 import bayesianLocalization as bl

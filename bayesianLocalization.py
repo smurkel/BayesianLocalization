@@ -1,7 +1,7 @@
 from util import *
 
 import simulator
-import modelparams as prm
+import settings as prm
 np.seterr(divide = 'ignore')
 
 """SET IMAGE AND MICROSCOPE PARAMETERS"""
@@ -9,19 +9,19 @@ np.seterr(divide = 'ignore')
 
 def prior_x(val):
     # x prior probability is: flat probability, but it is somewhere in the image.
-    return prm.PDF_X.pdf(val)
+    return prm.PRIOR_PDF_X.pdf(val)
 
 def prior_y(val):
     # y prior probability is: flat probability, but it is somewhere in the image.
-    return prm.PDF_Y.pdf(val)
+    return prm.PRIOR_PDF_Y.pdf(val)
 
 def prior_sigma(val):
     # sigma prior probability is: log normal distribution
-    return prm.PDF_SIGMA.pdf(val)
+    return prm.PRIOR_PDF_SIGMA.pdf(val)
 
 def prior_intensity(val):
     # intensity prior probability is lognormal.
-    return prm.PDF_INTENSITY.pdf(val)
+    return prm.PRIOR_PDF_INTENSITY.pdf(val)
 
 def estimate_map(data, initial_suggestion = None):
     """This can be improved by starting the random walk not at a random sample from the prior distributions, but instead near the mode of the likelihood. Also: the data should be cropped such that the mode of the likelihood
@@ -31,7 +31,7 @@ def estimate_map(data, initial_suggestion = None):
     if initial_suggestion:
         x = initial_suggestion
     else:
-        x = (prm.PDF_X.rvs(1), prm.PDF_Y.rvs(1), prm.PDF_SIGMA.rvs(1), prm.PDF_INTENSITY.rvs(1))
+        x = (prm.PRIOR_PDF_X.rvs(1), prm.PRIOR_PDF_Y.rvs(1), prm.PRIOR_PDF_SIGMA.rvs(1), prm.PRIOR_PDF_INTENSITY.rvs(1))
     p_x = likelihood(data, x) + prior_probability(*x)
     MAP = x
     max_log = p_x
@@ -91,7 +91,7 @@ def likelihood(data, parameters):
     # Parameters are of a model that describes a Gaussian spot.
     # Here:
     # 1 - 'simulate' the data according to parameters.
-    model = simulator.particle_image(prm.IMG_SIZE, parameters)
+    model = simulator.particle_image(prm.CROP_SIZE, parameters)
     # 2 - subtract model from data. what remains is noise.
     noise = data - model
     # 3 - evaluate the probability of observing this noise given the noise model

@@ -2,6 +2,14 @@ import numpy as np
 from scipy.stats import norm
 
 
+def particle_pixel_value(params, pixel_index):
+    norm_x = norm(loc=params[0], scale=params[2])
+    norm_y = norm(loc=params[1], scale=params[2])
+    return (norm_x.cdf(pixel_index[0] + 0.5) - norm_x.cdf(pixel_index[0] - 0.5)) *\
+           (norm_y.cdf(pixel_index[1] + 0.5) - norm_y.cdf(pixel_index[1] - 0.5)) *\
+           params[3]
+
+### OLD ###
 def particle_image(imageRadius, params):
     size = imageRadius * 2 + 1
     img = np.zeros((size, size))

@@ -1,4 +1,4 @@
-import modelparams as prm
+import settings as prm
 import bayesianLocalization as bl
 import simulator as sim
 import numpy as np
@@ -24,11 +24,9 @@ class Particle:
         return False
 
 class Model:
-    def __init__(self, width, height, frames):
-        self.width = width
-        self.height = height
-        self.frames = frames
-        self.psf_roi_rad = 5
+    def __init__(self, data):
+        self.data = data
+        self.width, self.height, self.frames = data.shape
         self.particles = list()
 
     def genStack(self):
@@ -66,8 +64,8 @@ class Model:
         else:
             x = np.random.uniform(0, self.width)
             y = np.random.uniform(0, self.height)
-            sigma = prm.PDF_SIGMA.rvs(1)
-            intensity = prm.PDF_INTENSITY.rvs(1)
+            sigma = prm.PRIOR_PDF_SIGMA.rvs(1)
+            intensity = prm.PRIOR_PDF_INTENSITY.rvs(1)
             newParticle = Particle(x,y,sigma,intensity)
             newParticle.b = prm.HMM.sample(length = self.frames)
             self.particles.append(newParticle)
