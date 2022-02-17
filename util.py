@@ -50,6 +50,12 @@ def CS_ERROR(message):
     if CS_LOG_ERROR:
         raise Exception(message)
 
+def sum_z(stack):
+    nx, ny, nf = stack.shape
+    zsum = np.zeros((nx, ny))
+    for f in range(nf):
+        zsum += stack[:, :, f]
+    return zsum
 
 def Plot(*args, normalize=False):
     def DefaultColorMap(i):

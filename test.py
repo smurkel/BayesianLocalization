@@ -4,6 +4,8 @@ data = Load("tiffstack.tif")
 
 model = Model(data)
 
-model.add_particle()
+new_particle = model.add_particle()
+model.set_active_particle(new_particle)
+
 model.optimize_particle()
 

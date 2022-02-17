@@ -1,60 +1,53 @@
-
-from itertools import count
+from particle import *
 import settings
-import numpy as np
+import matplotlib.pyplot as plt
 
-import simulator
-
-
-class Particle:
-    idgen = count(0)
-
-    def __init__(self, a=None, b=None):
-        self.id = next(Particle.idgen)
-        """
-        A particle can be initialized with or without values for the model parameters:
-            a = (x, y, size, intensity)
-            b = (b0, b1, ..., bN)
-        """
-        self.a = a
-        self.b = b
-
-        self.roi = None
-        self.img = None
-
-    def __eq__(self, other):
-        if isinstance(other, Particle):
-            return self.id == other.id
-        return False
-
-    def update_roi(self, img_width, img_height):
-        xmin = max([0, self.a[0] - settings.CROP_SIZE])
-        ymin = max([0, self.a[1] - settings.CROP_SIZE])
-        xmax = min([img_width, self.a[0] + settings.CROP_SIZE])
-        ymax = min([img_height, self.a[0] + settings.CROP_SIZE])
-        self.roi = (xmin, ymin, xmax, ymax)
-
-    def update_img(self):
-        self.img = np.zeros((settings.CROP_SIZE * 2 + 1, settings.CROP_SIZE * 2 + 1))
-        ix = 0
-        for x in range(self.roi[0], self.roi[2]):
-            iy = 0
-            for y in range(self.roi[0], self.roi[2]):
-                self.img[ix,iy] = simulator.particle_pixel_value(self.a, (x, y))
-                iy+=1
-            ix+=1
-
+from util import sum_z
 class Model:
 
-    def __init__(self, shape):
+    def __init__(self, data):
         """
         :param shape: tuple, (stack_width, stack_height, stack_depth)
         """
-        self.width = shape[0]
-        self.height = shape[1]
-        self.depth = shape[2]
+        self.shape = data.shape
+        self.data = data
+        self.data_zsum = sum_z(self.data)
 
+        self.width = self.shape[0]
+        self.height = self.shape[1]
+        self.depth = self.shape[2]
+        self.stack = np.zeros(self.shape)
+        self.stack_zsum = np.zeros(self.shape)
         self.particles = list()
+        self.active_particle = None
+
+        settings.MODEL_WIDTH = self.width
+        settings.MODEL_HEIGHT = self.height
+        settings.MODEL_DEPTH = self.depth
+
+    def generate_stack(self):
+        """
+        The stack is an image stack of the same shape as the input data, representing what the current particle
+        model looks like. All of the model's particles are shown, except for one: the active_particle. The model stack
+        is thus the 'background' of the model; i.e., it shows the particles with fixed parameters, on top of which the
+        currently active particle has yet to be added.
+        """
+        self.stack = np.zeros((self.width, self.height, self.depth))
+        for p in self.particles:
+            p.update_roi()
+            p.update_img()
+        for f in range(self.depth):
+            for p in self.particles:
+                if p == self.active_particle:
+                    continue
+                if p.b[f]:
+                    self.stack[p.roi[0]:p.roi[2], p.roi[1]:p.roi[3], f] += p.img
+        self.stack_zsum = sum_z(self.stack)
+
+        return self.stack
+
+    def set_active_particle(self, particle):
+        self.active_particle = particle
 
     def add_particle(self, method = "random"):
         """
@@ -67,15 +60,30 @@ class Model:
             y = np.random.uniform(0, self.height)
             size = settings.PRIOR_PDF_SIGMA.rvs(1)
             intensity = settings.PRIOR_PDF_INTENSITY.rvs(1)
-            new_particle = Particle((x, y, size, intensity))
+            new_particle = Particle((x, y, size, intensity), settings.HMM.sample(length = self.depth))
             self.particles.append(new_particle)
-
+        if method == "missing density":
+            self.set_active_particle(None)
+            self.generate_stack()
+            residual_density = self.data_zsum - self.stack_zsum
+            plt.imshow(residual_density)
+            plt.show()
+            residual_peak = np.unravel_index(np.argmax(residual_density), (self.width, self.height))
+            print(residual_peak)
+            x = residual_peak[0]
+            y = residual_peak[1]
+            size = settings.PRIOR_PDF_SIGMA.rvs(1)
+            intensity = settings.PRIOR_PDF_INTENSITY.rvs(1)
+            new_particle = Particle((x, y, size, intensity), settings.HMM.sample(length=self.depth))
+            self.particles.append(new_particle)
         return new_particle
 
-    def optimize_particle(self, particle):
-        # 1. MAP estimation
+    def remove_particle(self, particle):
+        if particle in self.particles:
+            self.particles.remove(particle)
 
-        # 2. MAP refinement
-        # 3. Find best state sequence
+    def optimize_particle(self, particle):
+        pass
 
     def score_particle(self, particle):
+        pass

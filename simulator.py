@@ -30,8 +30,7 @@ def fp_pixel_value(params, pixel_i, pixel_j):
                     norm_y.cdf(pixel_j + 0.5) - norm_y.cdf(pixel_j - 0.5))
 
 def noise(img_size, mu, sigma):
-    size = img_size * 2 + 1
-    return np.random.normal(loc = mu, scale = sigma, size = (size, size)).astype(np.int16)
+    return np.random.normal(loc = mu, scale = sigma, size = img_size).astype(np.int16)
 
 
 def timelapse(img_size, n_frames, particle_list, markov_model, noise_mu, noise_sigma):
