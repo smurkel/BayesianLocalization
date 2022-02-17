@@ -1,0 +1,9 @@
+test stack with two particles
+
+particle 1
+(2.126824025479337, 4.736265086065856, array([0.88380945]), array([1454.53253559]))
+[True True True False False False  True  True  True False]
+
+particle 2
+(4.73501391812751, 13.754689448769385, array([1.06787987]), array([669.68696488]))
+[True True True False False False  True False False False]
