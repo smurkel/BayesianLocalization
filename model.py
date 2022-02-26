@@ -60,21 +60,18 @@ class Model:
             y = np.random.uniform(0, self.height)
             size = settings.PRIOR_PDF_SIGMA.rvs(1)
             intensity = settings.PRIOR_PDF_INTENSITY.rvs(1)
-            new_particle = Particle((x, y, size, intensity), settings.HMM.sample(length = self.depth))
+            new_particle = Particle([x, y, size, intensity], settings.HMM.sample(length = self.depth))
             self.particles.append(new_particle)
         if method == "missing density":
             self.set_active_particle(None)
             self.generate_stack()
             residual_density = self.data_zsum - self.stack_zsum
-            plt.imshow(residual_density)
-            plt.show()
             residual_peak = np.unravel_index(np.argmax(residual_density), (self.width, self.height))
-            print(residual_peak)
             x = residual_peak[0]
             y = residual_peak[1]
             size = settings.PRIOR_PDF_SIGMA.rvs(1)
             intensity = settings.PRIOR_PDF_INTENSITY.rvs(1)
-            new_particle = Particle((x, y, size, intensity), settings.HMM.sample(length=self.depth))
+            new_particle = Particle([x, y, size, intensity], settings.HMM.sample(length=self.depth))
             self.particles.append(new_particle)
         return new_particle
 

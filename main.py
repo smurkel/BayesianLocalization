@@ -17,8 +17,6 @@ print(np.shape(data))
 model = Model(data)
 particle = model.add_particle(method = "missing density")
 
-print(particle)
-
 bl.maximum_a_posteriori_estimate(model, particle)
 
 
