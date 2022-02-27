@@ -7,3 +7,13 @@ particle 1
 particle 2
 (4.73501391812751, 13.754689448769385, array([1.06787987]), array([669.68696488]))
 [True True True False False False  True False False False]
+
+22 02 27 result a:
+Particle (id = 0) with parameters:
+a = (2.131126896615955,4.735649529780601,[0.85956873],[1421.81093827])
+b = [True, True, True, False, False, False, True, True, True, False]
+
+Particle (id = 1) with parameters:
+a = (5.039545094420571,13.811795661298039,[1.32267047],[779.81899788])
+b = [True, True, True, False, False, False, True, False, False, False]
+

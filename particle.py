@@ -21,13 +21,19 @@ class Particle:
         self.roi = None
         self.img = None
 
+        self.p_f = 0
+        self.p_n = 0
+
     def __eq__(self, other):
         if isinstance(other, Particle):
             return self.id == other.id
         return False
 
     def __str__(self):
-        return "\nParticle (id = {}) with parameters:\na = ({},{},{},{})\nb = ".format(self.id, *self.a) + str(self.b)
+        return "\nParticle (id = {}) with parameters:\n" \
+               "a = ({},{},{},{})\n".format(self.id, *self.a) +\
+               "b = \n" + str(self.b) +\
+               "\nP(D|F) = {:.2f}\tP(D|N) = {:.2f}".format(self.p_f, self.p_n)
 
     def set_a(self, a):
         self.a = a

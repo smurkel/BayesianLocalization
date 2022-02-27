@@ -1,6 +1,7 @@
 from particle import *
 import settings
 import matplotlib.pyplot as plt
+import bayesianLocalization_stack as bl
 
 from util import sum_z
 class Model:
@@ -20,6 +21,7 @@ class Model:
         self.stack_zsum = np.zeros(self.shape)
         self.particles = list()
         self.active_particle = None
+
 
         settings.MODEL_WIDTH = self.width
         settings.MODEL_HEIGHT = self.height
@@ -71,7 +73,7 @@ class Model:
             y = residual_peak[1]
             size = settings.PRIOR_PDF_SIGMA.rvs(1)
             intensity = settings.PRIOR_PDF_INTENSITY.rvs(1)
-            new_particle = Particle([x, y, size, intensity], settings.HMM.sample(length=self.depth))
+            new_particle = Particle([x, y, size, intensity], settings.HMM.sample(length = self.depth))
             self.particles.append(new_particle)
         return new_particle
 
@@ -79,8 +81,13 @@ class Model:
         if particle in self.particles:
             self.particles.remove(particle)
 
-    def optimize_particle(self, particle):
-        pass
+    def optimize_active_particle(self):
+        bl.map_estimate(self, self.active_particle)
+        bl.map_refine(self, self.active_particle)
 
-    def score_particle(self, particle):
-        pass
+
+    def score_active_particle(self):
+        P_F, P_N = bl.calculate_particle_probabilities(self, self.active_particle)
+        self.active_particle.p_f = P_F
+        self.active_particle.p_n = P_N
+        return P_F, P_N
